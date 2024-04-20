@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create AWS Server</title>
+<style>
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th, td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+  }
+  th {
+    background-color: #f2f2f2;
+  }
+</style>
+</head>
+<body>
+  <h1>Create AWS Server</h1>
+  
+  <label for="resource-type">Select Server Type:</label>
+  <select id="resource-type">
+    <option value="nginx">Nginx</option>
+    <option value="apache">Apache</option>
+    <!-- Add more options for other resource types if needed -->
+  </select>
+  <button onclick="createResource()" id="btn">Create Server</button>
+  <button onclick="getAllServers()" id="getAll">Get All Server</button>
+
+  <table id="response">
+    <thead>
+      <tr>
+        <th>Server Name</th>
+        <th>Container ID</th>
+        <th>Container IP</th>
+        <th>URL</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  
+  
+
+
+  
+  <script>
+    const functionUrl = 'https://lj6xvdtzs7.execute-api.ap-south-1.amazonaws.com/test';
+    function getAllServers(){
+      const btn = document.getElementById('getAll');
+      const event = {
+        instanceInfo: true,
+      };
+
+      console.log(event);
+      btn.innerText = 'Loading...';
+
+      fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(event)
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed');
+        }
+        return response.json();
+      })
+      .then(data => {
+        data.body.forEach(element => {
+            updateTable(element);
+        });
+        console.log(data);
+      })
+      .finally(() => {
+        btn.innerText = 'Get All Server';
+      }); 
+    }
+    function createResource() {
+      const resourceType = document.getElementById('resource-type').value;      
+      const btn = document.getElementById('btn');
+      const event = {
+        serverType: resourceType,
+      };
+
+      console.log(event);
+      btn.innerText = 'Creating...';
+
+      fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(event)
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed');
+        }
+        return response.json();
+      })
+      .then(data => {
+        updateTable(data.body);
+        
+        console.log(data);
+      })
+      .finally(() => {
+        btn.innerText = 'Create Server';
+      }); 
+    }
+
+
+    function updateTable(data){
+      const tableBody = document.querySelector('#response tbody');
+      const row = tableBody.insertRow();
+      const cell1 = row.insertCell(0);
+      const cell2 = row.insertCell(1);
+      const cell3 = row.insertCell(2);
+      const cell4 = row.insertCell(3);
+      
+      cell1.innerText = data.serverName;
+      cell2.innerText = data.containerID;
+      cell3.innerText = data.containerIP;
+      cell4.innerHTML = `<a href="${data.url}" target="_blank">${data.url}</a>`;
+    }
+  </script>
+</body>
+</html>
