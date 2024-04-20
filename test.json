@@ -1,0 +1,19 @@
+{
+    "resource_requests": [
+      {
+        "resource_type": "ec2",
+        "ami": "ami-007020fd9c84e18c7"
+      },
+      {
+        "resource_type": "s3",
+        "name": "sdugfasdhgfjhdgzsf"
+      },
+      {
+        "resource_type": "elbv2",
+        "name": "sample",
+        "subnet_1": "subnet-0bc46cdafef66ffee",
+        "subnet_2": "subnet-04ff009651b972467"
+      }
+    ]
+  }
+

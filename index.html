@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create AWS Server</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Create AWS Resources</h1>
+
+    <label for="resource-type">Select Resource Type:</label>
+    <select id="resource-type" multiple onchange="showFields()">
+        <option value="ec2">EC2 Instance</option>
+        <option value="s3">S3 Bucket</option>
+        <option value="elbv2">Load Balancer</option>
+        <!-- Add more options for other resource types if needed -->
+    </select>
+
+    <!-- Additional fields for EC2, S3, and ELBv2 -->
+    <div id="ec2-options" style="display: none;">
+        <label for="ami">AMI ID:</label>
+        <input type="text" id="ami">
+    </div>
+
+    <div id="s3-options" style="display: none;">
+        <label for="bucket-name">Bucket Name:</label>
+        <input type="text" id="bucket-name">
+    </div>
+
+    <div id="elbv2-options" style="display: none;">
+        <label for="elb-name">ELB Name:</label>
+        <input type="text" id="elb-name">
+        <label for="subnet-1">Subnet 1:</label>
+        <input type="text" id="subnet-1">
+        <label for="subnet-2">Subnet 2:</label>
+        <input type="text" id="subnet-2">
+    </div>
+
+    <button onclick="createResources()" id="createBtn">Create Resources</button>
+
+    <!-- Table to display response -->
+    <table id="response">
+        <thead>
+            <tr>
+                <th>Resource Type</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        function showFields() {
+            const selectedOptions = document.getElementById('resource-type').selectedOptions;
+
+            // Reset display for all options before showing selected ones
+            document.getElementById('ec2-options').style.display = 'none';
+            document.getElementById('s3-options').style.display = 'none';
+            document.getElementById('elbv2-options').style.display = 'none';
+
+            // Iterate through all selected options and show corresponding fields
+            for (const option of selectedOptions) {
+                const selectedOption = option.value;
+                if (selectedOption === 'ec2') {
+                    document.getElementById('ec2-options').style.display = 'block';
+                } else if (selectedOption === 's3') {
+                    document.getElementById('s3-options').style.display = 'block';
+                } else if (selectedOption === 'elbv2') {
+                    document.getElementById('elbv2-options').style.display = 'block';
+                }
+            }
+        }
+
+
+        const functionUrl = 'https://2igm7ppzgd.execute-api.ap-south-1.amazonaws.com/test';
+        let responseData;
+        function createResources() {
+            const selectedOptions = Array.from(document.getElementById('resource-type').selectedOptions);
+            const btn = document.getElementById('createBtn');
+            btn.innerText = 'Creating...';
+
+            const resourceRequests = [];
+            for (const option of selectedOptions) {
+                const resourceType = option.value;
+                let requestData = { resource_type: resourceType };
+
+                // Gather specific details based on resource type
+                if (resourceType === 'ec2') {
+                    requestData.ami = document.getElementById('ami').value;
+                } else if (resourceType === 's3') {
+                    requestData.name = document.getElementById('bucket-name').value;
+                } else if (resourceType === 'elbv2') {
+                    requestData.name = document.getElementById('elb-name').value;
+                    requestData.subnet_1 = document.getElementById('subnet-1').value;
+                    requestData.subnet_2 = document.getElementById('subnet-2').value;
+                }
+
+                resourceRequests.push(requestData);
+            }
+            const event = { resource_requests: resourceRequests };
+            console.log(event);
+
+            fetch(functionUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(event)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    responseData = JSON.parse(data.body);
+                    console.log(responseData);
+                    updateTable(responseData);
+                })
+                .finally(() => {
+                    btn.innerText = 'Get All Server';
+                });
+        }
+
+        function updateTable(resourceRequests) {
+            const tableBody = document.querySelector('#response tbody');
+            tableBody.innerHTML = '';
+
+            // Loop through each resource type in the response
+            for (const resourceType in responseData) {
+                if (responseData.hasOwnProperty(resourceType)) {
+                    // Create a row in the table for the resource
+                    const row = tableBody.insertRow();
+                    const cell1 = row.insertCell(0);
+                    const cell2 = row.insertCell(1);
+
+                    // Display resource type and information in the table
+                    cell1.innerText = resourceType.toUpperCase(); // Display resource type
+                    cell2.innerText = responseData[resourceType]; // Display resource information
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
