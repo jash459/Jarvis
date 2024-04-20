@@ -11,8 +11,8 @@
       {
         "resource_type": "elbv2",
         "name": "sample",
-        "subnet_1": "subnet-0bc46cdafef66ffee",
-        "subnet_2": "subnet-04ff009651b972467"
+        "subnet_1": "subnet-0bc46cdafef66",
+        "subnet_2": "subnet-04ff009651b97"
       }
     ]
   }
