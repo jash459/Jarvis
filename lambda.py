@@ -10,6 +10,7 @@ def lambda_handler(event, context):
     #     'body': "Under Construction🔨"
     # }
     
+
     client = boto3.client('ec2', region_name='ap-south-1')
     client_ssm = boto3.client('ssm')
     
@@ -20,6 +21,9 @@ def lambda_handler(event, context):
         'statusCode': 200,
         'body': response
         }
+    
+    if 'serverType' not in event:
+        return create_docker_image(client_ssm, 'i-0c81d56dce8b810c6', event)
         
 
     
