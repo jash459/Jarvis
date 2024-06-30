@@ -1,6 +1,7 @@
 import json
 import boto3
 import datetime 
+import uuid
 
 
 def lambda_handler(event, context):
@@ -22,7 +23,7 @@ def lambda_handler(event, context):
         
 
     
-    instance_id = 'i-0111c349419c23dfa'
+    instance_id = 'i-0c81d56dce8b810c6'
     server_type = event.get('serverType')
     port = open_new_port(client)
     
@@ -66,7 +67,7 @@ def lambda_handler(event, context):
             'containerID': container_id,
             'containerIP': container_ip,
             'serverName': server_name,
-            'url': f'http://3.110.131.140:{port}'
+            'url': f'http://13.126.145.27:{port}'
         }
     }
     # return {
@@ -76,7 +77,42 @@ def lambda_handler(event, context):
     
     
 
+# create dockerfile and then create image and then run the image
+def create_docker_image(client_ssm, instance_id, event):
+    dockerfile = event.get('dockerfile')
+    build_command = event.get('build_command')
+    run_command = event.get('run_command')
 
+    filename = str(uuid.uuid4())
+    # Command to create a Dockerfile
+    command = f'echo "{dockerfile}" > {filename}.dockerfile &&  {build_command} && {run_command} && rm {filename}.dockerfile'
+    
+
+    
+    # Send command to build the Docker image
+    response = client_ssm.send_command(
+        DocumentName="AWS-RunShellScript",
+        Parameters={'commands': [command]},
+        InstanceIds=[instance_id],
+    )
+
+    # Get the command invocation details
+    command_id = response['Command']['CommandId']
+    
+    # Wait for the command to complete
+    waiter = client_ssm.get_waiter('command_executed')
+    waiter.wait(
+        CommandId=command_id,
+        InstanceId=instance_id
+    )
+
+    # Retrieve the command output
+    output = client_ssm.get_command_invocation(
+        CommandId=command_id,
+        InstanceId=instance_id
+    )['StandardOutputContent']
+    
+    return output
 
 def get_container_ip(client_ssm, instance_id, container_id):
 
@@ -116,7 +152,7 @@ def get_container_ip(client_ssm, instance_id, container_id):
 def open_new_port(client):
 
     port = 3000
-    security_group_id = 'sg-081498b5806dc1264'
+    security_group_id = 'sg-01ae651283a884a83'
     
     existing_ports = get_open_ports(client, security_group_id)
     
@@ -180,7 +216,7 @@ def get_open_ports(client, security_group_id):
     
 
 def get_all_containers(client, client_ssm):
-    instance_id = 'i-0111c349419c23dfa'
+    instance_id = 'i-0c81d56dce8b810c6'
     container_ports = get_container_ports(client_ssm, instance_id)
     delete_unused_inbound_rules(client, instance_id, container_ports)
     
@@ -234,7 +270,7 @@ def get_all_containers(client, client_ssm):
             'containerID': container_id,
             'containerIP': ip,
             'serverName': server_name,
-            'url': f'http://3.110.131.140:{port}'
+            'url': f'http://13.126.145.27:{port}'
         })
 
     return extracted_info
@@ -290,7 +326,7 @@ def get_open_ports(client, security_group_id):
     
 
 def delete_unused_inbound_rules(client, instance_id, container_ports):
-    security_group_id = 'sg-081498b5806dc1264'
+    security_group_id = 'sg-01ae651283a884a83'
     existing_ports = get_open_ports(client, security_group_id)
     
     print('existing_ports', existing_ports)
@@ -300,7 +336,7 @@ def delete_unused_inbound_rules(client, instance_id, container_ports):
     for port in existing_ports:
         if port not in container_ports:
             client.revoke_security_group_ingress(
-                GroupId = 'sg-081498b5806dc1264',
+                GroupId = 'sg-01ae651283a884a83',
                 IpPermissions=[{
                     'IpProtocol': 'tcp',
                     'FromPort': port,
