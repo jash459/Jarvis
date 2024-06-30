@@ -1,7 +1,5 @@
 import json
 import boto3
-import datetime 
-import uuid
 
 
 def lambda_handler(event, context):
@@ -23,7 +21,7 @@ def lambda_handler(event, context):
         }
     
     if 'serverType' not in event:
-        return create_docker_image(client_ssm, 'i-0c81d56dce8b810c6', event)
+        return create_docker_image(client_ssm, 'i-0c81d56dce8b810c6', event, client)
         
 
     
@@ -82,23 +80,39 @@ def lambda_handler(event, context):
     
 
 # create dockerfile and then create image and then run the image
-def create_docker_image(client_ssm, instance_id, event):
+def create_docker_image(client_ssm, instance_id, event, client):
+    # Open a new port for the container
+    port_number = open_new_port(client)
+
+    # Get the Dockerfile, build command, and run command from the event
     dockerfile = event.get('dockerfile')
+    dockerfile = dockerfile.replace('port', str(port_number))
+
+    
     build_command = event.get('build_command')
+
     run_command = event.get('run_command')
+    run_command = run_command.replace('port', str(port_number))
+    
 
-    filename = str(uuid.uuid4())
     # Command to create a Dockerfile
-    command = f'echo "{dockerfile}" > {filename}.dockerfile &&  {build_command} && {run_command} && rm {filename}.dockerfile'
+    command = f'cd /home/ubuntu && echo "{dockerfile}" > Dockerfile &&  {build_command} && {run_command} && sudo rm -rf Dockerfile'
+    
+    # command = "cd /llm && pwd"
+    print("comand: ", command)
+    print("dockerfile: ", dockerfile)
+    print("build_command: ", build_command)
+    print("run_command: ", run_command)
     
 
     
-    # Send command to build the Docker image
     response = client_ssm.send_command(
         DocumentName="AWS-RunShellScript",
         Parameters={'commands': [command]},
         InstanceIds=[instance_id],
     )
+    
+    print("response: ", response)
 
     # Get the command invocation details
     command_id = response['Command']['CommandId']
@@ -115,6 +129,8 @@ def create_docker_image(client_ssm, instance_id, event):
         CommandId=command_id,
         InstanceId=instance_id
     )['StandardOutputContent']
+    
+    print("output: ", output)
     
     return output
 
